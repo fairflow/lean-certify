@@ -1,0 +1,93 @@
+import LeanCertify
+
+/-! Each lint watched passing and failing. -/
+
+def sumTo : Nat → Nat
+  | 0 => 0
+  | n + 1 => (n + 1) + sumTo n
+
+def checkS (n s : Nat) : Bool := (List.range (n + 1)).foldl (· + ·) 0 == s && sumTo n == s
+
+/-- info: R3 passes: the evaluation path of checkS is structural -/
+#guard_msgs in
+#certify_structural checkS
+
+def wfLog (n : Nat) : Nat := if h : n < 2 then 0 else 1 + wfLog (n / 2)
+termination_by n
+decreasing_by omega
+
+def checkWF (n : Nat) : Bool := wfLog n == 3
+
+/--
+error: R3 fails: the evaluation path of checkWF reaches 1 constant(s) R3 forbids:
+• WellFounded.Nat.fix [Init.WF]: well-founded recursion on a `Nat` measure: it reduces in the kernel (fuel `measure + 1`), but it is not structural
+    via [checkWF, wfLog, WellFounded.Nat.fix]
+-/
+#guard_msgs in
+#certify_structural checkWF
+
+partial def loop (n : Nat) : Nat := if n == 0 then 0 else loop (n - 1)
+def checkPartial (n : Nat) : Bool := loop n == 0
+
+/--
+error: R3 fails: the evaluation path of checkPartial reaches 1 constant(s) R3 forbids:
+• loop [this file]: opaque (a `partial def` or `opaque`): no value to reduce
+    via [checkPartial, loop]
+-/
+#guard_msgs in
+#certify_structural checkPartial
+
+def slowId (n : Nat) : Nat := n
+@[implemented_by slowId] def fastId (n : Nat) : Nat := n
+def checkImpl (n : Nat) : Bool := fastId n == n
+
+/--
+error: R3 fails: the evaluation path of checkImpl reaches 1 constant(s) R3 forbids:
+• fastId [this file]: @[implemented_by]: the compiled code is not the definition
+    via [checkImpl, fastId]
+-/
+#guard_msgs in
+#certify_structural checkImpl
+
+-- A stand-in for Mathlib's `Finset.card`, to watch R1 report without Mathlib.
+def Finset.card (l : List Nat) : Nat := l.length
+def enumAll (k : Nat) : List Nat := List.range (2 ^ k)
+def fuelFor (k : Nat) : Nat := Finset.card (enumAll k) + 1
+
+/--
+warning: R1 reports: the evaluation path of fuelFor counts or builds a domain at run time (1 site(s)); pass a cheap bound instead:
+• Finset.card [this file]: materialises or counts a domain
+    via [fuelFor, Finset.card]
+-/
+#guard_msgs in
+#certify_domain fuelFor
+/-- info: R1: nothing to report on checkS -/
+#guard_msgs in
+#certify_domain checkS
+
+/--
+info: R4 passes: checkS depends on [] ⊆ [propext, Quot.sound]
+-/
+#guard_msgs in
+#certify_axioms checkS
+theorem usesChoice : ∃ n : Nat, n = n := Classical.choice ⟨⟨0, rfl⟩⟩
+/--
+error: R4 fails: usesChoice depends on [Classical.choice], outside the allow-list [propext, Quot.sound]
+-/
+#guard_msgs in
+#certify_axioms usesChoice
+
+def wfLex : Nat → Nat → Nat
+  | 0, _ => 0
+  | n + 1, m => wfLex n (m + 1) + wfLex 0 m
+termination_by n m => (n, m)
+
+def checkLex (n : Nat) : Bool := wfLex n 0 == 0
+
+/--
+error: R3 fails: the evaluation path of checkLex reaches 1 constant(s) R3 forbids:
+• wfLex._unary [this file]: auxiliary of a definition by well-founded recursion
+    via [checkLex, wfLex, wfLex._unary]
+-/
+#guard_msgs in
+#certify_structural checkLex

@@ -1,0 +1,19 @@
+name = "lean-certify"
+version = "0.1.0"
+defaultTargets = ["LeanCertify"]
+
+# No dependencies beyond core Lean, deliberately: the library must stay light
+# and build unchanged on every toolchain its users pin (v4.31.0 and v4.33.0 as
+# of 2026-10-09).
+
+[leanOptions]
+autoImplicit = false
+
+[[lean_lib]]
+name = "LeanCertify"
+
+# Tests: each lint and gate watched passing and failing, pinned by
+# `#guard_msgs`. `lake build LeanCertifyTest`.
+[[lean_lib]]
+name = "LeanCertifyTest"
+globs = ["LeanCertifyTest.+"]
