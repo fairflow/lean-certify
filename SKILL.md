@@ -68,6 +68,9 @@ Do them in order. Do not start a step before the previous one's output exists.
    ```lean
    #certify_axioms fact_i      -- R4: within Harness.config.axioms
    ```
+   When `Holds s` is itself a `∀` (hypotheses on the specification), put
+   `K.verdict s c` in parentheses before applying it: `(K.verdict s c) h₁ h₂`.
+   Without them the next argument fills the default `h`, not `Holds s`.
    and the **negative test** (R9): corrupt one certificate and watch the gate
    reject it, pinned with `#guard_msgs`. A gate never watched failing does not
    count. Record kernel time against certificate size (R8).
