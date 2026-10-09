@@ -42,7 +42,9 @@ def slowId (n : Nat) : Nat := n
 def checkImpl (n : Nat) : Bool := fastId n == n
 
 /--
-error: R3 fails: the evaluation path of checkImpl reaches 1 constant(s) R3 forbids:
+info: R3 passes: the evaluation path of checkImpl is structural
+---
+info: R3 note: the evaluation path of checkImpl reaches 1 @[implemented_by] constant(s); under route := kernel the kernel reduces their reference definitions, so this is not an error:
 • fastId [this file]: @[implemented_by]: the compiled code is not the definition
     via [checkImpl, fastId]
 -/
@@ -159,11 +161,15 @@ def nthIs (xs : List Nat) (i v : Nat) : Bool :=
 #certify_structural nthIs
 example : nthIs [3, 5, 7] 1 5 = true := by decide +kernel
 
--- A checker that really calls `toString` on its evaluation path still fails.
+-- A checker that really calls `toString` reaches `Nat.repr` (`@[implemented_by]`):
+-- information under the kernel route (v0.2), an error under `route := .native`
+-- (`LeanCertifyTest/RouteNative.lean`).
 def showsAs (n : Nat) (s : String) : Bool := toString n == s
 
 /--
-error: R3 fails: the evaluation path of showsAs reaches 1 constant(s) R3 forbids:
+info: R3 passes: the evaluation path of showsAs is structural
+---
+info: R3 note: the evaluation path of showsAs reaches 1 @[implemented_by] constant(s); under route := kernel the kernel reduces their reference definitions, so this is not an error:
 • Nat.repr [Init.Data.Repr]: @[implemented_by]: the compiled code is not the definition
     via [showsAs, instToStringNat, Nat.repr]
 -/

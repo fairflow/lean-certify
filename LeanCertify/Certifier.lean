@@ -45,12 +45,15 @@ nowhere else. -/
 def Engine.Complete (E : Engine Spec Cert RCert Holds) : Prop :=
   ∀ s, Holds s → ∃ n c, E.produce s n = .pass c
 
-/-- Optional: a refinement. On a validated certificate a fast evaluator
-agrees with the specification evaluator. -/
+/-- Optional: a refinement. On a validated certificate, and within the
+domain `dom`, a fast evaluator agrees with the specification evaluator.
+The fast evaluator may read the specification (v0.2, Matthew's decision
+(c), `docs/v0.2-decisions.md`). -/
 structure Refinement (Spec Cert Q : Type) (specEval : Spec → Q → Bool) where
   valid : Spec → Cert → Bool
-  fastEval : Cert → Q → Bool
-  refine : ∀ s c q, valid s c = true → fastEval c q = specEval s q
+  dom : Spec → Cert → Q → Bool
+  fastEval : Spec → Cert → Q → Bool
+  refine : ∀ s c q, valid s c = true → dom s c q = true → fastEval s c q = specEval s q
 
 /-- The kernel gate: the checker's verdict carried to the property. The
 Boolean is reduced by the kernel unless a proof is supplied. -/

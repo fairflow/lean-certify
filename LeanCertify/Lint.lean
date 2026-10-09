@@ -10,8 +10,10 @@ reports any constant on a rule's list, with the chain that reaches it.
   `Certifier` or `Engine`, that of its `check` functions only) must not
   reach `WellFounded.fix`, a `._unary`/`._binary` auxiliary of well-founded
   recursion, `WellFounded.Nat.fix` (which does reduce, but is not
-  structural; see `docs/v1-report.md`), an opaque constant (which is what `partial` produces), or a
-  declaration with `@[implemented_by]`. The walk enters every module,
+  structural; see `docs/v1-report.md`), or an opaque constant (which is
+  what `partial` produces). A declaration with `@[implemented_by]` is
+  information under `route := .kernel` (the kernel reduces its reference
+  definition; v0.2) and an error under any other route. The walk enters every module,
   core included, since the kernel unfolds them all.
 * `#certify_domain f` (R1, reporting only, decision 8): `f`'s evaluation
   path must not count or build the domain of a measure (`Finset.card`,
@@ -139,6 +141,10 @@ def kernelNatOps : List Name :=
    ``Nat.ble, ``Nat.land, ``Nat.lor, ``Nat.xor, ``Nat.shiftLeft, ``Nat.shiftRight,
    ``Nat.pow]
 
+/-- Does `n` carry `@[implemented_by]`? -/
+def isImplementedBy (env : Environment) (n : Name) : Bool :=
+  (Compiler.implementedByAttr.getParam? env n).isSome
+
 /-- Why `n` blocks kernel reduction, if it does. -/
 def structuralOffence (env : Environment) (n : Name) : Option String :=
   if n == ``WellFounded.fix || n == ``WellFounded.fixF then
@@ -148,7 +154,7 @@ def structuralOffence (env : Environment) (n : Name) : Option String :=
       (fuel `measure + 1`), but it is not structural"
   else if n.isStr && (n.getString! == "_unary" || n.getString! == "_binary") then
     some "auxiliary of a definition by well-founded recursion"
-  else if (Compiler.implementedByAttr.getParam? env n).isSome then
+  else if isImplementedBy env n then
     some "@[implemented_by]: the compiled code is not the definition"
   else match env.find? n with
     | some (.opaqueInfo _) => some "opaque (a `partial def` or `opaque`): no value to reduce"
@@ -265,12 +271,22 @@ syntax (name := certifyStructural) "#certify_structural " ident : command
       | some cs => return cs
       | none => return evalDeps (← getEnv) n
     let env ← getEnv
-    let offs := structuralOffenders env n seeds
+    let cfg ← liftTermElabM Harness.readConfig
+    let all := structuralOffenders env n seeds
+    -- Under the kernel route, `@[implemented_by]` is information only: the
+    -- kernel reduces the reference definition (v0.2, Matthew's decision (b)).
+    let (impl, offs) :=
+      if cfg.route == .kernel then all.partition fun o => isImplementedBy env o.1
+      else (#[], all)
     if offs.isEmpty then
       logInfo m!"R3 passes: the evaluation path of {.ofConstName n} is structural"
     else
       logErrorAt id m!"R3 fails: the evaluation path of {.ofConstName n} reaches \
         {offs.size} constant(s) R3 forbids:{render env offs}"
+    unless impl.isEmpty do
+      logInfo m!"R3 note: the evaluation path of {.ofConstName n} reaches {impl.size} \
+        @[implemented_by] constant(s); under route := kernel the kernel reduces their \
+        reference definitions, so this is not an error:{render env impl}"
   | _ => throwUnsupportedSyntax
 
 /-- R1: report domain materialisation on `f`'s evaluation path. A warning,
