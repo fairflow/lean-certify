@@ -6,7 +6,7 @@ theory, computes it; a checker proved sound certifies each product in the
 kernel. Termination arguments stay in the theory and are never recomputed at
 run time.
 
-Status: V1 released (v0.1.0, 2026-10-09; current v0.1.2); v0.2 decisions
+Status: V1 released (v0.1.0, 2026-10-09; current v0.1.3); v0.2 decisions
 recorded, not built. Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
 v4.33.0. Build the library with `lake build`, and the tests with
 `lake build LeanCertifyTest`. The procedure, as a Claude skill, is `SKILL.md`.
@@ -45,6 +45,7 @@ Known downstream modules (keep this list current):
 | locus (private) | `Logic.Certify` (bisimulation certificates) | `lake build LogicCertify` |
 
 Releases: v0.1.0 (V1), v0.1.1 (R3: panic functions are leaves), v0.1.2
-(lints open the parameters of a generic certifier).
+(lints open the parameters of a generic certifier), v0.1.3 (R4 runs
+automatically on every `Certifier` and `Engine` declaration).
 
 Licence: Apache-2.0 (see `LICENSE`).
