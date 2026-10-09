@@ -98,6 +98,11 @@ An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
   declaration; named exceptions in `Harness.config.axiomExceptions`; no
   per-certifier override. `native_decide` is excluded (its axioms fall
   outside the list). Mathlib's `Finset` brings in `Classical.choice`.
+  Core `String` leaks it too, through the UTF-8 decoding proofs: `toList`,
+  `length`, `trimAscii`, `contains`, `toLower` and `splitOn` reach
+  `Classical.choice`. Clean: `==`, `decide (s = t)`, `isEmpty`,
+  `String.ofList`, `toByteArray`; `++` needs only `propext`. This is pinned
+  per toolchain in `LeanCertifyTest/ChoiceLeaks.lean` (v4.31.0 and v4.33.0).
 - **R5. Three-valued verdict.** `fail` only with a refutation certificate;
   `flag` is rerun at a raised budget (`flagReruns`, `budgetFactor`) and never
   dropped; every skip and cap reported.
