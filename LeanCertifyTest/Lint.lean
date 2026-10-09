@@ -122,3 +122,25 @@ error: R3 fails: the evaluation path of Nat.land reaches 1 constant(s) R3 forbid
 -/
 #guard_msgs in
 #certify_structural Nat.land
+
+/-! The exemption is the kernel's list and nothing else: a user-defined
+function of the same shape as `Nat.bitwise` (two arguments, well-founded
+recursion on the first) is still rejected. -/
+
+def myBitwise (f : Bool → Bool → Bool) (n m : Nat) : Nat :=
+  if h : n = 0 ∧ m = 0 then 0
+  else 2 * myBitwise f (n / 2) (m / 2) + (if f (n % 2 == 1) (m % 2 == 1) then 1 else 0)
+termination_by (n + m)
+decreasing_by omega
+
+def myLand (n m : Nat) : Nat := myBitwise and n m
+
+def checkMyLand (n : Nat) : Bool := myLand n 1 == 1
+
+/--
+error: R3 fails: the evaluation path of checkMyLand reaches 1 constant(s) R3 forbids:
+• myBitwise._unary [this file]: auxiliary of a definition by well-founded recursion
+    via [checkMyLand, myLand, myBitwise, myBitwise._unary]
+-/
+#guard_msgs in
+#certify_structural checkMyLand

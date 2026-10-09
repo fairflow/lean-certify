@@ -84,13 +84,15 @@ def walk (env : Environment) (root : Name) (bad : Name → Option String)
 
 /-! ### R3: structural recursion -/
 
-/-- The `Nat` operations the kernel evaluates natively on literals (GMP
-acceleration). Their Lean definitions are never unfolded on literals, and
-some are by well-founded recursion (`Nat.bitwise._unary` under `Nat.land`),
-so the R3 walk treats them as leaves. The list is the one
-`Lean.Meta.reduceNat?` mirrors from the kernel (v4.31.0 and v4.33.0); the
-acceleration applies once the arguments reduce to literals, which they do
-in a closed `decide`. -/
+/-- The `Nat` operations the Lean kernel itself evaluates on literals (GMP
+acceleration): exactly the binary cases of `type_checker::reduce_nat` in
+`src/kernel/type_checker.cpp`, identical at v4.31.0 and v4.33.0, e.g.
+<https://github.com/leanprover/lean4/blob/v4.31.0/src/kernel/type_checker.cpp>
+(lines 622–635). `Nat.log2` is not among them. Some are defined by
+well-founded recursion (`Nat.land` through `Nat.bitwise._unary`), but on
+literals the kernel never unfolds them, so the R3 walk treats these and only
+these as leaves. This is not an exemption for fast well-founded
+definitions: a user's own is still rejected (`LeanCertifyTest/Lint.lean`). -/
 def kernelNatOps : List Name :=
   [``Nat.add, ``Nat.sub, ``Nat.mul, ``Nat.div, ``Nat.mod, ``Nat.gcd, ``Nat.beq,
    ``Nat.ble, ``Nat.land, ``Nat.lor, ``Nat.xor, ``Nat.shiftLeft, ``Nat.shiftRight,
