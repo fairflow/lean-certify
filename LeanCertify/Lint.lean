@@ -84,6 +84,18 @@ def walk (env : Environment) (root : Name) (bad : Name → Option String)
 
 /-! ### R3: structural recursion -/
 
+/-- The `Nat` operations the kernel evaluates natively on literals (GMP
+acceleration). Their Lean definitions are never unfolded on literals, and
+some are by well-founded recursion (`Nat.bitwise._unary` under `Nat.land`),
+so the R3 walk treats them as leaves. The list is the one
+`Lean.Meta.reduceNat?` mirrors from the kernel (v4.31.0 and v4.33.0); the
+acceleration applies once the arguments reduce to literals, which they do
+in a closed `decide`. -/
+def kernelNatOps : List Name :=
+  [``Nat.add, ``Nat.sub, ``Nat.mul, ``Nat.div, ``Nat.mod, ``Nat.gcd, ``Nat.beq,
+   ``Nat.ble, ``Nat.land, ``Nat.lor, ``Nat.xor, ``Nat.shiftLeft, ``Nat.shiftRight,
+   ``Nat.pow]
+
 /-- Why `n` blocks kernel reduction, if it does. -/
 def structuralOffence (env : Environment) (n : Name) : Option String :=
   if n == ``WellFounded.fix || n == ``WellFounded.fixF then
@@ -101,7 +113,7 @@ def structuralOffence (env : Environment) (n : Name) : Option String :=
 
 /-- The R3 offenders reachable from `n`. -/
 def structuralOffenders (env : Environment) (n : Name) : Array (Name × String × List Name) :=
-  walk env n (structuralOffence env) (fun _ => true)
+  walk env n (structuralOffence env) (!kernelNatOps.contains ·)
 
 /-! ### R1: domain materialisation -/
 

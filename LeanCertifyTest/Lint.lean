@@ -91,3 +91,34 @@ error: R3 fails: the evaluation path of checkLex reaches 1 constant(s) R3 forbid
 -/
 #guard_msgs in
 #certify_structural checkLex
+
+/-! A `match` that picks a few of many constructors compiles to a
+`_sparseCasesOn` auxiliary that tests constructor indices with `Nat.land`.
+`Nat.land` is defined by well-founded recursion (`Nat.bitwise._unary`) but
+the kernel evaluates it natively on literals, so it is a leaf of the walk.
+Found on `decideG4` in lax-logic (2026-10-09). -/
+
+inductive Shape | a | b | c | d | e | f | g | h
+
+def pick : Shape → Bool
+  | .c => true
+  | .f => true
+  | _ => false
+
+def checkPick (s : Shape) : Bool := pick s
+
+/--
+info: R3 passes: the evaluation path of checkPick is structural
+-/
+#guard_msgs in
+#certify_structural checkPick
+example : checkPick .f = true := by decide +kernel
+
+-- Entered as a root, `Nat.land` does show its well-founded definition.
+/--
+error: R3 fails: the evaluation path of Nat.land reaches 1 constant(s) R3 forbids:
+• Nat.bitwise._unary [Init.Data.Nat.Bitwise.Basic]: auxiliary of a definition by well-founded recursion
+    via [Nat.land, Nat.bitwise, Nat.bitwise._unary]
+-/
+#guard_msgs in
+#certify_structural Nat.land
