@@ -100,20 +100,23 @@ def walk (env : Environment) (root : Name) (bad : Name → Option String)
     (enter : Name → Bool) : Array (Name × String × List Name) :=
   walkFrom env root (evalDeps env root) bad enter
 
-/-- The checking functions of a `Certifier` (its `check`) or an `Engine`
-(both `check`s), as terms; `none` for any other constant. Only these are on
-the evaluation path: `sound` is a proof and `produce` is untrusted. -/
-def checkTerms (n : Name) : MetaM (Option (Array Expr)) := do
+/-- The constants on the evaluation path of a `Certifier` (its `check`) or
+an `Engine` (both `check`s); `none` for any other constant. Only these are
+on the evaluation path: `sound` is a proof and `produce` is untrusted. A
+certifier may be generic: its leading parameters are opened first. -/
+def checkTerms (n : Name) : MetaM (Option (Array Name)) := do
   let ci ← getConstInfo n
-  let k := mkConst n (ci.levelParams.map mkLevelParam)
-  let ty ← whnf ci.type
-  let proj (c : Expr) : MetaM Expr := do whnf (← mkAppM ``Certify.Certifier.check #[c])
-  match ty.getAppFn.constName? with
-  | some ``Certify.Certifier => return some #[← proj k]
-  | some ``Certify.Engine =>
-    return some #[← proj (← mkAppM ``Certify.Engine.yes #[k]),
-                  ← proj (← mkAppM ``Certify.Engine.no #[k])]
-  | _ => return none
+  forallTelescopeReducing ci.type fun xs ty => do
+    let k := mkAppN (mkConst n (ci.levelParams.map mkLevelParam)) xs
+    let ty ← whnf ty
+    let proj (c : Expr) : MetaM (Array Name) := do
+      return (← whnf (← mkAppM ``Certify.Certifier.check #[c])).getUsedConstants
+    match ty.getAppFn.constName? with
+    | some ``Certify.Certifier => return some (← proj k)
+    | some ``Certify.Engine =>
+      return some ((← proj (← mkAppM ``Certify.Engine.yes #[k])) ++
+                   (← proj (← mkAppM ``Certify.Engine.no #[k])))
+    | _ => return none
 
 /-! ### R3: structural recursion -/
 
@@ -201,11 +204,14 @@ def budgetOffence (env : Environment) (extra : List Name) (c : Name) : Option St
 /-- The `Holds` argument of a `Certifier` or `Engine` constant's type. -/
 def holdsOf (n : Name) : MetaM Expr := do
   let ci ← getConstInfo n
-  let ty ← whnf ci.type
-  match ty.getAppFn.constName?, ty.getAppArgs with
-  | some ``Certify.Certifier, #[_, _, h] => return h
-  | some ``Certify.Engine, #[_, _, _, h] => return h
-  | _, _ => throwError "{.ofConstName n} is not a Certify.Certifier or Certify.Engine"
+  -- A generic certifier's parameters are opened; `Holds` may mention them,
+  -- which is harmless here: only its constants are read.
+  forallTelescopeReducing ci.type fun _ ty => do
+    let ty ← whnf ty
+    match ty.getAppFn.constName?, ty.getAppArgs with
+    | some ``Certify.Certifier, #[_, _, h] => return h
+    | some ``Certify.Engine, #[_, _, _, h] => return h
+    | _, _ => throwError "{.ofConstName n} is not a Certify.Certifier or Certify.Engine"
 
 /-- The R2 offenders of `Holds`. A synthetic root stands for `Holds` itself. -/
 def statementOffenders (env : Environment) (extra : List Name) (holds : Expr) :
@@ -251,7 +257,7 @@ syntax (name := certifyStructural) "#certify_structural " ident : command
     let n ← resolve id
     let seeds ← liftTermElabM do
       match ← checkTerms n with
-      | some ts => return ts.flatMap (·.getUsedConstants)
+      | some cs => return cs
       | none => return evalDeps (← getEnv) n
     let env ← getEnv
     let offs := structuralOffenders env n seeds

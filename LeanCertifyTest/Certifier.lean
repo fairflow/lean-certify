@@ -120,3 +120,30 @@ error: R3 fails: the evaluation path of wfCert reaches 1 constant(s) R3 forbids:
 -/
 #guard_msgs in
 #certify_structural wfCert
+
+-- A generic certifier: the lints open its parameters (found on locus's
+-- `wbisimCertifier`, 2026-10-09).
+def memCert {α : Type} [DecidableEq α] : Certifier (List α × α) Nat (fun s => s.2 ∈ s.1) where
+  check s i := s.1[i]? == some s.2
+  sound s i h := List.mem_of_getElem? (by simpa using h)
+
+/--
+info: R3 passes: the evaluation path of memCert is structural
+-/
+#guard_msgs in
+#certify_structural memCert
+/-- info: R2 passes: the property of memCert mentions no budget -/
+#guard_msgs in
+#certify_statement memCert
+
+def fuelledGeneric {α : Type} : Certifier (List α) Unit (fun l => searchWithin 64 l.length = true) where
+  check l _ := searchWithin 64 l.length
+  sound _ _ h := h
+
+/--
+error: R2 fails: the property of fuelledGeneric mentions a budget (1 site(s)); a budget belongs in `produce` or `Engine.Complete`:
+• searchWithin [this file]: it takes a budget argument `fuel`
+    via [Holds, searchWithin]
+-/
+#guard_msgs in
+#certify_statement fuelledGeneric
