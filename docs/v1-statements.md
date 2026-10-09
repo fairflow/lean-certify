@@ -1,5 +1,8 @@
 # Lean certify V1: statements for review (R10)
 
+**Approved by Matthew, 2026-10-09:** the statements as below; toolchain pinned
+at v4.31.0; `WellFounded.Nat.fix` stays rejected by R3.
+
 For Matthew, 2026-10-09. These are the signatures and definitions of
 `LeanCertify/Certifier.lean` and `LeanCertify/Config.lean` as written. Both
 type-check on Lean v4.31.0 and v4.33.0, core `Lean` only, no Mathlib. No proof
