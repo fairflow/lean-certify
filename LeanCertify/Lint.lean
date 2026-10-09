@@ -26,6 +26,11 @@ reports any constant on a rule's list, with the chain that reaches it.
   names in its type, contains `fuel` or `budget` (any case), or if it is
   listed in `Harness.config.budgetNames`. A measure in the theory itself
   (a height index of an inductive) is allowed: inductives are not entered.
+* The **R4 linter** (an error, automatic since v0.1.3): after every
+  command, each newly declared constant whose type is a `Certifier` or an
+  `Engine` (under its parameters) has its axioms checked against
+  `Harness.config`, as `#certify_axioms` would. A `sound` proof that pulls
+  in `Classical.choice` (by `tauto`, say) then fails at its declaration.
 * `#certify_axioms f` (R4, an error): the axioms of `f` lie within
   `Harness.config.axioms`, plus the exceptions it names for `f`.
 -/
@@ -326,5 +331,39 @@ syntax (name := certifyAxioms) "#certify_axioms " ident : command
       logErrorAt id m!"R4 fails: {.ofConstName n} depends on {outside.toList}, \
         outside the allow-list {allowed}"
   | _ => throwUnsupportedSyntax
+
+/-! ### R4, automatic: the certifier linter -/
+
+/-- Is `ty` (under its leading `∀`s, syntactically) a `Certifier` or an
+`Engine`? Type abbreviations are not unfolded. -/
+def isCertifierType (ty : Expr) : Bool :=
+  match ty.getForallBody.getAppFn.constName? with
+  | some n => n == ``Certify.Certifier || n == ``Certify.Engine
+  | none => false
+
+/-- Certifier declarations already checked in this process. -/
+initialize checkedCertifiers : IO.Ref NameSet ← IO.mkRef {}
+
+/-- R4 on every new `Certifier` or `Engine` of the current module, after
+each command. Approved by Matthew for v0.1.3 (2026-10-09). -/
+def certifierAxiomLinter : Linter where
+  name := `Certify.Lint.certifierAxiomLinter
+  run _ := do
+    let env ← getEnv
+    let seen ← checkedCertifiers.get
+    let fresh := env.constants.map₂.foldl (init := #[]) fun acc n ci =>
+      if !seen.contains n && !n.isInternal && isCertifierType ci.type then acc.push n else acc
+    if fresh.isEmpty then return
+    checkedCertifiers.set (fresh.foldl (·.insert ·) seen)
+    let cfg ← liftTermElabM Harness.readConfig
+    for n in fresh do
+      let extra := (cfg.axiomExceptions.find? (·.1 == n)).map (·.2) |>.getD []
+      let allowed := cfg.axioms ++ extra
+      let outside := (← collectAxioms n).filter (!allowed.contains ·)
+      unless outside.isEmpty do
+        logError m!"R4 fails: the certifier {.ofConstName n} depends on {outside.toList}, \
+          outside the allow-list {allowed} (Harness.config)"
+
+initialize addLinter certifierAxiomLinter
 
 end Certify.Lint

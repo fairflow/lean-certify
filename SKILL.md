@@ -75,6 +75,12 @@ Do them in order. Do not start a step before the previous one's output exists.
    reject it, pinned with `#guard_msgs`. A gate never watched failing does not
    count. Record kernel time against certificate size (R8).
 
+**Screening** (a producer emits candidate counterexamples, a checker
+evaluates the invariant on them) is not a separate tool: it is an engine's
+refutation side, a certifier for `Holds s → False`, as FinCM countermodels
+are in lax-logic. A batch driver that screens many specifications and
+reports pass, fail and flag (R5, R7) is not built; it is a V2 candidate.
+
 An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
 `yes`, `no` (a certifier for `Holds s → False`; use `Certifier.empty` with
 `RCert := Empty` when there is no refutation side) and `produce`.
@@ -98,7 +104,9 @@ An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
   auxiliaries, opaque constants (`partial def`) and `@[implemented_by]` on
   `f`'s evaluation path, core included.
 - **R4. Axiom allow-list** `[propext, Quot.sound]` on every certified
-  declaration; named exceptions in `Harness.config.axiomExceptions`; no
+  declaration (since v0.1.3 checked automatically on every `Certifier` and
+  `Engine` declaration, against `Harness.config`, so a `sound` proof that
+  pulls in `Classical.choice`, e.g. by `tauto`, fails where it is declared); named exceptions in `Harness.config.axiomExceptions`; no
   per-certifier override. `native_decide` is excluded (its axioms fall
   outside the list). Mathlib's `Finset` brings in `Classical.choice`.
   Core `String` leaks it too, through the UTF-8 decoding proofs: `toList`,

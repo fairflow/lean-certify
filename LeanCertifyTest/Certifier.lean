@@ -147,3 +147,17 @@ error: R2 fails: the property of fuelledGeneric mentions a budget (1 site(s)); a
 -/
 #guard_msgs in
 #certify_statement fuelledGeneric
+
+/-! R4 runs by itself on every certifier (v0.1.3): a `sound` proof that
+pulls in `Classical.choice` fails at its declaration. -/
+
+/--
+error: R4 fails: the certifier choiceCert depends on [Classical.choice], outside the allow-list [propext,
+ Quot.sound] (Harness.config)
+-/
+#guard_msgs in
+def choiceCert : Certifier Nat Unit (fun n => n = n ∨ n ≠ n) where
+  check _ _ := true
+  sound n _ _ := Classical.em (n = n)
+
+-- The clean certifiers above passed silently.
