@@ -141,3 +141,13 @@ axiom list cannot be overridden per certifier. JSON for other tools:
 - call a budget running out a failure;
 - claim a certificate checked unless the kernel checked it with axioms
   pinned. A statement carrying `sorry` is OPEN.
+
+## Releasing lean-certify
+
+- A patch release (0.1.x) never changes an interface signature
+  (`Certifier`, `Verdict`, `Engine`, `Refinement`, `Config`, the attribute);
+  a minor release (0.x) may, with a migration note.
+- Before every tag, build the downstream modules listed in the README
+  against the candidate commit, under the budget rule, and tag only if all
+  pass.
+
