@@ -16,3 +16,5 @@ Status: V1 under construction (from 2026-10-09). Nothing here is released.
 
 Used by: [locus](https://github.com/fairflow/locus) (private) and
 [lax-logic-in-lean](https://github.com/fairflow/lax-logic-in-lean), pinned by tag.
+
+Licence: Apache-2.0 (see `LICENSE`).
