@@ -144,3 +144,28 @@ error: R3 fails: the evaluation path of checkMyLand reaches 1 constant(s) R3 for
 -/
 #guard_msgs in
 #certify_structural checkMyLand
+
+/-! `xs[i]?` goes through the `GetElem?` instance for lists, whose `get!`
+panics; the panic message is never evaluated by the kernel, so the panic
+functions are leaves (found on `checkDeriv` in lax-logic, 2026-10-09). -/
+
+def nthIs (xs : List Nat) (i v : Nat) : Bool :=
+  match xs[i]? with
+  | some x => x == v
+  | none => false
+
+/-- info: R3 passes: the evaluation path of nthIs is structural -/
+#guard_msgs in
+#certify_structural nthIs
+example : nthIs [3, 5, 7] 1 5 = true := by decide +kernel
+
+-- A checker that really calls `toString` on its evaluation path still fails.
+def showsAs (n : Nat) (s : String) : Bool := toString n == s
+
+/--
+error: R3 fails: the evaluation path of showsAs reaches 1 constant(s) R3 forbids:
+• Nat.repr [Init.Data.Repr]: @[implemented_by]: the compiled code is not the definition
+    via [showsAs, instToStringNat, Nat.repr]
+-/
+#guard_msgs in
+#certify_structural showsAs

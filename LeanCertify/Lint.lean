@@ -146,10 +146,20 @@ def structuralOffence (env : Environment) (n : Name) : Option String :=
     | some (.opaqueInfo _) => some "opaque (a `partial def` or `opaque`): no value to reduce"
     | _ => none
 
+/-- The panic functions. `panicCore msg` is `default` (Init/Prelude.lean,
+v4.31.0 and v4.33.0): the message is discarded, and the other three only
+build that message, so the kernel never evaluates it. Their values reach
+`String.Internal.append` (opaque) and `Nat.repr` (`@[implemented_by]`)
+through the message, which would otherwise flag every checker that uses
+`xs[i]?`: the walk enters the whole `GetElem?` instance, `get!` included. -/
+def panicLeaves : List Name :=
+  [``panicCore, ``panic, ``panicWithPos, ``panicWithPosWithDecl]
+
 /-- The R3 offenders reachable from `seeds`, on behalf of `n`. -/
 def structuralOffenders (env : Environment) (n : Name) (seeds : Array Name) :
     Array (Name × String × List Name) :=
-  walkFrom env n seeds (structuralOffence env) (!kernelNatOps.contains ·)
+  walkFrom env n seeds (structuralOffence env)
+    (fun c => !kernelNatOps.contains c && !panicLeaves.contains c)
 
 /-! ### R1: domain materialisation -/
 
