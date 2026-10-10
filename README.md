@@ -6,8 +6,8 @@ theory, computes it; a checker proved sound certifies each product in the
 kernel. Termination arguments stay in the theory and are never recomputed at
 run time.
 
-Status: V1 released (v0.1.0, 2026-10-09; current v0.1.3); v0.2 decisions
-recorded, not built. Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
+Status: v0.2.0 released (2026-10-10): V1 plus chunking and streaming,
+`@[csimp]` fast paths, and decisions (b) and (c); `docs/v0.2-report.md`. Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
 v4.33.0. Build the library with `lake build`, and the tests with
 `lake build LeanCertifyTest`. The procedure, as a Claude skill, is `SKILL.md`.
 
