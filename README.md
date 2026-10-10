@@ -46,6 +46,31 @@ Known downstream modules (keep this list current):
 
 Releases: v0.1.0 (V1), v0.1.1 (R3: panic functions are leaves), v0.1.2
 (lints open the parameters of a generic certifier), v0.1.3 (R4 runs
-automatically on every `Certifier` and `Engine` declaration).
+automatically on every `Certifier` and `Engine` declaration), v0.2.0 (V2:
+chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)).
+
+## Migrating from 0.1.x to 0.2.0
+
+0.2.0 is a minor release: one interface signature changes.
+
+1. **`Refinement`** (decision (c), `docs/v0.2-decisions.md`). `fastEval`
+   now takes the specification, `fastEval : Spec → Cert → Q → Bool`, and
+   there is a domain, `dom : Spec → Cert → Q → Bool`. `refine` takes both
+   hypotheses: `valid s c = true → dom s c q = true → fastEval s c q =
+   specEval s q`. For the old meaning, write `dom := fun _ _ _ => true`, and
+   give `fastEval` a first argument `_`. (No known downstream module used
+   `Refinement` in 0.1.x.)
+2. **R3 and `@[implemented_by]`** (decision (b)). Under the default
+   `route := .kernel`, an `@[implemented_by]` constant on a checker's path
+   is now an information note ("R3 note: …"), no longer an error. Under any
+   other route it is still an error. A `#guard_msgs` that pinned the old
+   error must be re-pinned. In locus, `Logic/Certify.lean` pins R3 on
+   `wbisimCertifier` (`Match.guard`'s error strings reach `Nat.repr`); it
+   now reads "R3 passes" followed by the note.
+3. **New, nothing to migrate**: `Certify.all_of_chunks` and the commands
+   `certify_chunks` / `certify_all` (chunking and streaming), and
+   `Refinement.guarded`, `guarded_eq` and `certify_fastpath` (`@[csimp]`
+   fast paths). The new commands are keywords: an identifier spelled
+   `certify_chunks`, `certify_all` or `certify_fastpath` no longer parses.
 
 Licence: Apache-2.0 (see `LICENSE`).

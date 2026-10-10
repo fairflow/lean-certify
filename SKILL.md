@@ -62,7 +62,12 @@ Do them in order. Do not start a step before the previous one's output exists.
    `theorem fact_i : Holds s_i := K.verdict s_i c_i`, a `def` when `Holds`
    is a type; commit the generating script beside it), or a tactic that runs
    the producer at elaboration time and leaves the certificate in the term.
-   Above the project's chunk size, split one long `List.all` into chunks.
+   Above the project's chunk size, split one long `List.all` into chunks:
+   `certify_chunks N for l by f size n from a to b` proves chunks `a … b-1`
+   (one `decide +kernel` each), and `certify_all N for l by f size n`
+   assembles `N : l.all f = true`. To stream, put the `certify_chunks`
+   ranges in separate files, so that each process stays within budget, and
+   assemble in one file that imports them.
 6. **Kernel check.** `K.verdict s c` reduces `K.check s c = true` with
    `by decide +kernel` (the default argument). Then:
    ```lean
@@ -80,6 +85,13 @@ evaluates the invariant on them) is not a separate tool: it is an engine's
 refutation side, a certifier for `Holds s → False`, as FinCM countermodels
 are in lax-logic. A batch driver that screens many specifications and
 reports pass, fail and flag (R5, R7) is not built; it is a V2 candidate.
+
+**Fast paths.** Given a `Refinement R` (on a validated certificate, within
+`R.dom`, `R.fastEval` agrees with `specEval`), `certify_fastpath N from R`
+defines `N`, which the kernel reads as `specEval`, and proves a `@[csimp]`
+equation so that compiled code runs the guarded fast evaluator instead. For
+a plain checker with a proved `@check = @checkFast`, Lean's `@[csimp]` alone
+does the same.
 
 An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
 `yes`, `no` (a certifier for `Holds s → False`; use `Certifier.empty` with
