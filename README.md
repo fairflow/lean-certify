@@ -6,8 +6,9 @@ theory, computes it; a checker proved sound certifies each product in the
 kernel. Termination arguments stay in the theory and are never recomputed at
 run time.
 
-Status: v0.2.0 released (2026-10-10): V1 plus chunking and streaming,
-`@[csimp]` fast paths, and decisions (b) and (c); `docs/v0.2-report.md`. Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
+Status: v0.2.1 released (2026-10-14): v0.2.0 (V1 plus chunking and
+streaming, `@[csimp]` fast paths, and decisions (b) and (c);
+`docs/v0.2-report.md`) with R3 on theorems (`docs/v0.2.1-statements.md`). Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
 v4.33.0. Build the library with `lake build`, and the tests with
 `lake build LeanCertifyTest`. The procedure, as a Claude skill, is `SKILL.md`.
 
@@ -18,8 +19,8 @@ v4.33.0. Build the library with `lake build`, and the tests with
 - `docs/v0.2-decisions.md`: decided for v0.2 (R3 and `implemented_by`; the
   shape of `Refinement`), not yet built.
 - `docs/v0.2.1-statements.md`: R3 on theorems (what a proof decides by
-  evaluation), allowances, and the walk into `@[implemented_by]`; proposed
-  for 0.2.1.
+  evaluation), allowances, and the walk into `@[implemented_by]`; released
+  in 0.2.1.
 - `docs/survey.md`: the prior-art survey behind it (certifying algorithms,
   proof by reflection, translation validation, Rocq extraction, Lean
   precedents).
@@ -50,7 +51,8 @@ Known downstream modules (keep this list current):
 Releases: v0.1.0 (V1), v0.1.1 (R3: panic functions are leaves), v0.1.2
 (lints open the parameters of a generic certifier), v0.1.3 (R4 runs
 automatically on every `Certifier` and `Engine` declaration), v0.2.0 (V2:
-chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)).
+chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)),
+v0.2.1 (R3 on theorems: no vacuous pass; allowances).
 
 ## Migrating from 0.1.x to 0.2.0
 
@@ -76,7 +78,7 @@ chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)).
    fast paths). The new commands are keywords: an identifier spelled
    `certify_chunks`, `certify_all` or `certify_fastpath` no longer parses.
 
-## Changes in 0.2.1 (proposed, not yet tagged)
+## Changes in 0.2.1
 
 0.2.1 is a patch release: no interface signature changes, but R3 is
 stricter (`docs/v0.2.1-statements.md`).
