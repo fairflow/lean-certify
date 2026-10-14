@@ -45,7 +45,8 @@ Known downstream modules (keep this list current):
 | Project | Module | Build |
 |---|---|---|
 | lax-logic-in-lean | `CertifyAdoption` (FinCM countermodels) | `lake build CertifyAdoption` |
-| lax-logic-in-lean | `CertifyAdoption.CheckDeriv`, `LJF.OCheckDeriv` (derivation trees; main 4de06e9; its CI builds `LJF.OCheckDeriv` only) | `lake build CertifyAdoption LJF.OCheckDeriv` |
+| lax-logic-in-lean | `CertifyAdoption.CheckDeriv`, `LJF.OCheckDeriv` (derivation trees; main 4de06e9) | `lake build CertifyAdoption LJF.OCheckDeriv` |
+| lax-logic-in-lean | `CertifyAdoption.Regression` (regression test: R1, R3, R4 pinned on every certifier, engine and theorem decided through one; one certified run per checker; main 0828de8; its CI builds it with the two above on every change of the pin) | `lake build CertifyAdoption.Regression` |
 | locus (private) | `Logic.Certify` (bisimulation certificates) | `lake build LogicCertify` |
 
 Releases: v0.1.0 (V1), v0.1.1 (R3: panic functions are leaves), v0.1.2
