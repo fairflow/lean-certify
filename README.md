@@ -17,6 +17,9 @@ v4.33.0. Build the library with `lake build`, and the tests with
 - `docs/v1-report.md`: what V1 built, measurements, deviations.
 - `docs/v0.2-decisions.md`: decided for v0.2 (R3 and `implemented_by`; the
   shape of `Refinement`), not yet built.
+- `docs/v0.2.1-statements.md`: R3 on theorems (what a proof decides by
+  evaluation), allowances, and the walk into `@[implemented_by]`; proposed
+  for 0.2.1.
 - `docs/survey.md`: the prior-art survey behind it (certifying algorithms,
   proof by reflection, translation validation, Rocq extraction, Lean
   precedents).
@@ -72,5 +75,31 @@ chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)).
    `Refinement.guarded`, `guarded_eq` and `certify_fastpath` (`@[csimp]`
    fast paths). The new commands are keywords: an identifier spelled
    `certify_chunks`, `certify_all` or `certify_fastpath` no longer parses.
+
+## Changes in 0.2.1 (proposed, not yet tagged)
+
+0.2.1 is a patch release: no interface signature changes, but R3 is
+stricter (`docs/v0.2.1-statements.md`).
+
+1. **R3 on a theorem** no longer passes vacuously. `#certify_structural t`
+   walks what `t`'s proof decides by evaluation (`of_decide_eq_true` and its
+   siblings applied to a reflexivity proof, as `decide` and `decide +kernel`
+   leave them), and reports `WellFounded.fix`, `WellFounded.Nat.fix` and the
+   rest as **errors**; a theorem that decides nothing is an error ("nothing
+   to walk"). `#certify_domain t` walks the same, or gives the same error.
+   A `#guard_msgs` that pinned "R3 passes" or "R1: nothing to report" on a
+   theorem must be re-pinned.
+2. **`@[implemented_by]` under the kernel route** is still a note, but the
+   walk now enters it (the kernel reduces its value). A checker that
+   reaches a well-founded loop only through such a constant now fails R3:
+   core `Array.contains` and `Array.any` do, through `Array.anyM.loop`.
+3. **New: allowances.** `#certify_structural f allow c "reason", …`
+   downgrades to a warning what R3 forbids at or below each named `c`; an
+   allowance not on the path, or with nothing forbidden below it, is an
+   error. `allow` is not a reserved word.
+
+Downstream check (against this branch, local override): lax-logic-in-lean
+`CertifyAdoption`, `CertifyAdoption.CheckDeriv` and `LJF.OCheckDeriv`, and
+the private downstream module in the table above, all build unchanged.
 
 Licence: Apache-2.0 (see `LICENSE`).

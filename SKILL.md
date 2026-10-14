@@ -113,8 +113,17 @@ An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
 - **R3. Checkers are structurally recursive.** `WellFounded.fix` does not
   reduce in the kernel and is costly to elaborate. `#certify_structural f`
   rejects `WellFounded.fix`, `WellFounded.Nat.fix`, `._unary`/`._binary`
-  auxiliaries, opaque constants (`partial def`) and `@[implemented_by]` on
-  `f`'s evaluation path, core included.
+  auxiliaries and opaque constants (`partial def`) on `f`'s evaluation path,
+  core included. `@[implemented_by]` is a note under `route := .kernel`
+  (the walk enters its value, which is what the kernel reduces) and an
+  error under any other route. **On a theorem** (since 0.2.1) it walks what
+  the proof decides by evaluation (`by decide`, `by decide +kernel`, a fact
+  `K.verdict s c` through `K`'s check only), so run it on decided facts too:
+  a termination argument recomputed by the kernel is an error there. A
+  theorem that decides nothing is an error ("nothing to walk"). To accept a
+  known case, name it: `#certify_structural t allow c "reason"` makes what
+  lies below `c` a warning; an allowance that downgrades nothing is an
+  error.
 - **R4. Axiom allow-list** `[propext, Quot.sound]` on every certified
   declaration (since v0.1.3 checked automatically on every `Certifier` and
   `Engine` declaration, against `Harness.config`, so a `sound` proof that
