@@ -98,6 +98,39 @@ An engine bundles both sides: `Certify.Engine Spec Cert RCert Holds` with
 `RCert := Empty` when there is no refutation side) and `produce`.
 `Engine.Complete` is optional and is the only place a budget may appear.
 
+## Deciders (v0.3)
+
+A decider separates the two directions of an engine and adds fallbacks:
+`Certify.Prover` (a certifier for `Holds` and an untrusted `produce`),
+`Certify.Disprover` (the same for `Holds s → False`), and
+`Certify.Decider` = a prover, a disprover, and fallback pairs tried in
+order.  `Decider.run` races each pair (or runs it sequentially), raises the
+budget on a flag (R5), and returns a `Decision` (`yes`/`no` carrying the
+proposition from `sound`, or `flag` with the report of every attempt).  A
+certificate its certifier rejects is reported as a tool defect and ignored.
+An existing `Engine` plugs in by `Prover.ofEngine` / `Disprover.ofEngine`.
+
+Configuration (decision 12, option 1): the project's settings file holds
+the registry and the decider; users edit the lines marked EDIT.
+
+```lean
+def Harness.tools : Harness.Registry Spec Holds :=
+  [ .pair "subtab" SubTab.prover SubTab.disprover, .disprover "enum" Enum.disprover ]
+
+def Harness.decider : Harness.DeciderConfig where
+  prover    := "subtab"                    -- EDIT
+  disprover := "subtab"                    -- EDIT
+  fallback  := [("subtab", "enum")]        -- EDIT
+  run       := { mode := .race, budget := 1000, deadlineSec := 120 }   -- EDIT
+
+#certify_decider Harness.decider           -- every name checked at compile time
+```
+
+The executable is `def main := Certify.Cli.main Harness.tools parse Harness.decider`
+(flags `--deadline=`, `--budget=`, `--mode=`, `--json`; exit 0 yes, 1 no,
+2 error, 3 flag).  A guide for readers who do not know Lean:
+`docs/deciders.md`.
+
 ## The rules
 
 - **R1. Never materialise the domain of a measure at run time.** Counting a
