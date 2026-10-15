@@ -6,7 +6,9 @@ theory, computes it; a checker proved sound certifies each product in the
 kernel. Termination arguments stay in the theory and are never recomputed at
 run time.
 
-Status: v0.2.1 released (2026-10-14): v0.2.0 (V1 plus chunking and
+Status: v0.3.0 candidate on branch `v0.3` (2026-10-15): deciders (prover,
+disprover, fallback pairs; `docs/v0.3-statements.md`, `docs/deciders.md`); no
+changed signature.  v0.2.1 released (2026-10-14): v0.2.0 (V1 plus chunking and
 streaming, `@[csimp]` fast paths, and decisions (b) and (c);
 `docs/v0.2-report.md`) with R3 on theorems (`docs/v0.2.1-statements.md`). Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
 v4.33.0. Build the library with `lake build`, and the tests with
