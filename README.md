@@ -6,9 +6,10 @@ theory, computes it; a checker proved sound certifies each product in the
 kernel. Termination arguments stay in the theory and are never recomputed at
 run time.
 
-Status: v0.3.0 candidate on branch `v0.3` (2026-10-15): deciders (prover,
-disprover, fallback pairs; `docs/v0.3-statements.md`, `docs/deciders.md`); no
-changed signature.  v0.2.1 released (2026-10-14): v0.2.0 (V1 plus chunking and
+Status: v0.3.0 released (2026-10-15): deciders (prover, disprover,
+fallback pairs; a settings registry; a command-line driver;
+`docs/v0.3-statements.md`, `docs/deciders.md`); no changed signature.  It
+contains v0.2.1 (2026-10-14): v0.2.0 (V1 plus chunking and
 streaming, `@[csimp]` fast paths, and decisions (b) and (c);
 `docs/v0.2-report.md`) with R3 on theorems (`docs/v0.2.1-statements.md`). Core Lean only (no Mathlib); pinned at Lean v4.31.0, checked on
 v4.33.0. Build the library with `lake build`, and the tests with
@@ -23,6 +24,11 @@ v4.33.0. Build the library with `lake build`, and the tests with
 - `docs/v0.2.1-statements.md`: R3 on theorems (what a proof decides by
   evaluation), allowances, and the walk into `@[implemented_by]`; released
   in 0.2.1.
+- `docs/v0.3-statements.md`: deciders (prover, disprover, fallback pairs),
+  the settings file and its generated JSON, backward compatibility;
+  released in 0.3.0.
+- `docs/deciders.md`: choosing a decider's tools, for a reader who does not
+  know Lean.
 - `docs/survey.md`: the prior-art survey behind it (certifying algorithms,
   proof by reflection, translation validation, Rocq extraction, Lean
   precedents).
@@ -50,12 +56,15 @@ Known downstream modules (keep this list current):
 | lax-logic-in-lean | `CertifyAdoption.CheckDeriv`, `LJF.OCheckDeriv` (derivation trees; main 4de06e9) | `lake build CertifyAdoption LJF.OCheckDeriv` |
 | lax-logic-in-lean | `CertifyAdoption.Regression` (regression test: R1, R3, R4 pinned on every certifier, engine and theorem decided through one; one certified run per checker; main 0828de8; its CI builds it with the two above on every change of the pin) | `lake build CertifyAdoption.Regression` |
 | locus (private) | `Logic.Certify` (bisimulation certificates) | `lake build LogicCertify` |
+| locus (private) | `Logic.Examples.LinkModel.NeoSweep` (R3 over the Neo proof files) | `lake build Logic.Examples.LinkModel.NeoSweep` |
+| locus (private) | on-demand certificates: `ABPCert`, `ABPOneCert`, `ABPRunsCert`, `ABPTrackBuff` (streamed by `certify_chunks`, assembled by `certify_all`), `ABPOneRel`, `M1Prime.ToyFast`, all under `Logic.Examples` | one module at a time, the rows files first (about 20 s and under 4 GB each): `lake build Logic.Examples.<name>` |
 
 Releases: v0.1.0 (V1), v0.1.1 (R3: panic functions are leaves), v0.1.2
 (lints open the parameters of a generic certifier), v0.1.3 (R4 runs
 automatically on every `Certifier` and `Engine` declaration), v0.2.0 (V2:
 chunking and streaming, `@[csimp]` fast paths; decisions (b) and (c)),
-v0.2.1 (R3 on theorems: no vacuous pass; allowances).
+v0.2.1 (R3 on theorems: no vacuous pass; allowances), v0.3.0 (deciders:
+prover, disprover, fallback pairs; settings registry; command-line driver).
 
 ## Migrating from 0.1.x to 0.2.0
 
@@ -106,5 +115,41 @@ stricter (`docs/v0.2.1-statements.md`).
 Downstream check (against this branch, local override): lax-logic-in-lean
 `CertifyAdoption`, `CertifyAdoption.CheckDeriv` and `LJF.OCheckDeriv`, and
 the private downstream module in the table above, all build unchanged.
+
+## Changes in 0.3.0
+
+0.3.0 is a minor release that changes no interface signature
+(`docs/v0.3-statements.md`). A file that compiles against 0.2.1 compiles
+unchanged; nothing is recoded.
+
+1. **New: deciders** (`LeanCertify/Decider.lean`). `Certify.Prover` and
+   `Certify.Disprover` separate the two sides of an engine; `Certify.Decider`
+   is a prover, a disprover and fallback pairs tried in order;
+   `Decider.run` races or sequences each pair, raises the budget on a flag,
+   and returns a `Decision` carrying the proposition from `sound`. A
+   certificate its certifier rejects is reported as a tool defect and
+   ignored. An existing `Engine` plugs in through `Prover.ofEngine` and
+   `Disprover.ofEngine`.
+2. **New: the settings file.** `Harness.Registry` names the tools once;
+   `Harness.DeciderConfig` chooses them by name; `#certify_decider` checks
+   every name when the file compiles; `Certify.Cli.main` is the executable
+   (flags `--deadline=`, `--budget=`, `--mode=`, `--json`). The JSON is
+   generated from the Lean file, never read. A guide for readers who do not
+   know Lean: `docs/deciders.md`.
+3. **One proviso.** The new short names (`Prover`, `Disprover`, `Decider`,
+   `Decision`, `Mode`, `RunConfig`, `tryPair`, `Cli` in `Certify`;
+   `DeciderConfig`, `Tool`, `Registry` in `Harness`) can make an identifier
+   ambiguous in a file that opens `Certify` or `Harness` and gives one of
+   its own declarations the same short name. No known downstream file does.
+
+Downstream check against the candidate 173b60a (the tagged commit changes
+only `README.md` and `docs/v0.3-statements.md`), each project at its
+current main with the pin moved to 173b60a in a scratch worktree:
+lax-logic-in-lean `CertifyAdoption`,
+`CertifyAdoption.CheckDeriv`, `CertifyAdoption.Regression` and
+`LJF.OCheckDeriv` (v4.31.0; 72 s, every pinned message unchanged); locus
+`LogicCertify` (v4.33.0; 10 s), `NeoSweep` (34 s; R3 passes on its 140
+theorems proved by evaluation) and the 25 on-demand certificate modules
+(401 s in all, the largest process 26 s and 3.6 GB). All build unchanged.
 
 Licence: Apache-2.0 (see `LICENSE`).
