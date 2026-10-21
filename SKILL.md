@@ -152,7 +152,12 @@ The executable is `def main := Certify.Cli.main Harness.tools parse Harness.deci
   evaluation path, core included. A `partial_fixpoint` function is welcome
   in `produce` (same compiled code as `partial def`, but with an unfolding
   equation and `partial_correctness`) and in `Holds`; it must not be on the
-  checker's path. `@[implemented_by]` is a note under `route := .kernel`
+  checker's path. To certify facts about one, use `Certify.Fixpoint`: write
+  the body `F` uncurried with the recursive call as a parameter, prove
+  `monotone F` (`repeat monotonicity`) and the unfolding equation, record a
+  post-order table in the producer, and certify with `certifier F hF`
+  (values: `f a = some b`) or `specCertifier F P hP` (an invariant, e.g.
+  derivable / not derivable; choice-free). `@[implemented_by]` is a note under `route := .kernel`
   (the walk enters its value, which is what the kernel reduces) and an
   error under any other route. **On a theorem** (since 0.2.1) it walks what
   the proof decides by evaluation (`by decide`, `by decide +kernel`, a fact
