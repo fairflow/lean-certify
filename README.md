@@ -152,4 +152,36 @@ lax-logic-in-lean `CertifyAdoption`,
 theorems proved by evaluation) and the 25 on-demand certificate modules
 (401 s in all, the largest process 26 s and 3.6 GB). All build unchanged.
 
+## Changes in 0.3.1 (proposed)
+
+A patch release: no interface signature changes. R3 is stricter, R4 no
+longer sees producers (`LeanCertifyTest/PartialFixpoint.lean`).
+
+1. **R3 and `partial_fixpoint`.** R3 passed a `partial_fixpoint` definition,
+   which the kernel does not reduce (found in lax-logic's research,
+   2026-10-20). It now reports `Lean.Order.fix` with the reason and where
+   such a definition belongs: in `produce`, or in `Holds` with a certificate
+   checked against it. Using `partial_fixpoint` is not an error; asking the
+   kernel to evaluate it is.
+2. **R3 and axioms.** The walk treated an axiom as a harmless leaf. An axiom
+   that is not a proposition (`Classical.choice`, `sorryAx`) has no value to
+   reduce, and is now an error on the path, like an opaque constant: a
+   checker under `open Classical` (through `Classical.propDecidable`) now
+   fails R3, as `decide` fails on it. Propositional axioms (`propext`,
+   `Quot.sound`) are not reported, and proofs are still not walked, so a
+   classical soundness proof does not concern R3.
+3. **R4 pins results, not producers** (Matthew, 2026-10-21). The automatic
+   R4 check and `#certify_axioms` cover an `Engine`, `Prover` or
+   `Disprover` on its type and certifiers only, so a producer may reach
+   `Classical.choice` (a `partial_fixpoint` search does). A result stated
+   through the engine (`E.yes.verdict s c`) names the engine and with it the
+   producer; `#certify_axioms` now says so and points to the named certifier
+   (`K.verdict s c`), whose term does not mention the producer.
+4. **`sorryAx` fails everywhere**, producers included, even when the
+   allow-list names it.
+
+A `#guard_msgs` that pinned "R3 passes" on a checker reaching a
+non-propositional axiom, or R4's message for an engine whose producer uses
+`sorry`, must be re-pinned.
+
 Licence: Apache-2.0 (see `LICENSE`).

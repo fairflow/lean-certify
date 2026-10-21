@@ -146,8 +146,13 @@ The executable is `def main := Certify.Cli.main Harness.tools parse Harness.deci
 - **R3. Checkers are structurally recursive.** `WellFounded.fix` does not
   reduce in the kernel and is costly to elaborate. `#certify_structural f`
   rejects `WellFounded.fix`, `WellFounded.Nat.fix`, `._unary`/`._binary`
-  auxiliaries and opaque constants (`partial def`) on `f`'s evaluation path,
-  core included. `@[implemented_by]` is a note under `route := .kernel`
+  auxiliaries, opaque constants (`partial def`), `Lean.Order.fix`
+  (`partial_fixpoint`) and axioms that are not propositions
+  (`Classical.choice`, e.g. from `open Classical`; `sorryAx`) on `f`'s
+  evaluation path, core included. A `partial_fixpoint` function is welcome
+  in `produce` (same compiled code as `partial def`, but with an unfolding
+  equation and `partial_correctness`) and in `Holds`; it must not be on the
+  checker's path. `@[implemented_by]` is a note under `route := .kernel`
   (the walk enters its value, which is what the kernel reduces) and an
   error under any other route. **On a theorem** (since 0.2.1) it walks what
   the proof decides by evaluation (`by decide`, `by decide +kernel`, a fact
@@ -161,7 +166,12 @@ The executable is `def main := Certify.Cli.main Harness.tools parse Harness.deci
   declaration (since v0.1.3 checked automatically on every `Certifier` and
   `Engine` declaration, against `Harness.config`, so a `sound` proof that
   pulls in `Classical.choice`, e.g. by `tauto`, fails where it is declared); named exceptions in `Harness.config.axiomExceptions`; no
-  per-certifier override. `native_decide` is excluded (its axioms fall
+  per-certifier override. The pin never covers a producer: an `Engine`,
+  `Prover` or `Disprover` is pinned on its certifiers only (since v0.3.1).
+  State a result with the named certifier, `K.verdict s c`, not
+  `E.yes.verdict s c`: the latter names the engine and so, for Lean's axiom
+  count, its producer. `sorryAx` fails everywhere, producers included,
+  whatever the allow-list says. `native_decide` is excluded (its axioms fall
   outside the list). Mathlib's `Finset` brings in `Classical.choice`.
   Core `String` leaks it too, through the UTF-8 decoding proofs: `toList`,
   `length`, `trimAscii`, `contains`, `toLower` and `splitOn` reach
