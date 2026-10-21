@@ -192,8 +192,10 @@ even when only the producer reaches it. `what` names `n` in the message. -/
 def axiomFailure (n : Name) (what : MessageData) (pinned all : Array Name)
     (allowed : List Name) (suffix : MessageData := m!"") : Option MessageData :=
   let outside := pinned.filter fun a => a == ``sorryAx || !allowed.contains a
+  let never := if allowed.contains ``sorryAx then m!"; sorryAx is never allowed" else m!""
   if !outside.isEmpty then
-    some m!"R4 fails: {what} depends on {outside.toList}, outside the allow-list {allowed}{suffix}"
+    some m!"R4 fails: {what} depends on {outside.toList}, outside the allow-list \
+      {allowed}{suffix}{never}"
   else if all.contains ``sorryAx then
     some m!"R4 fails: the producer of {.ofConstName n} depends on sorryAx: \
       a `sorry` fails everywhere, the producer included"
