@@ -278,10 +278,19 @@ definition, the traversal `collectAxioms` performs.
   reduce in the kernel [25] and is costly to elaborate (`OFuelPFam.lean`:
   3 s as `unsafe`, 510 s without the kernel, 1 463 s committed). Lint:
   constant walk from `check`, rejecting `WellFounded.fix`, any `*._unary`
-  auxiliary, `partial`, `implemented_by`. Automatable today.
+  auxiliary, `partial`, `implemented_by`. Automatable today. Since v0.3.1
+  also `Lean.Order.fix` (what `partial_fixpoint` produces: a least fixpoint,
+  not kernel-reducible) and any axiom that is not a proposition
+  (`Classical.choice`, `sorryAx`), which the kernel cannot evaluate past. A
+  `partial_fixpoint` definition is not an error to use: it belongs in
+  `produce`, or in `Holds` with a certificate checked against it; only the
+  kernel must not be asked to evaluate it.
 - **R4. Axiom allow-list.** `[propext, Quot.sound]` on every certified
   declaration, checked by `collectAxioms` (`#axioms_within` in both
-  projects); named exceptions at `Classical.choice`; `native_decide` excluded
+  projects); the pin covers certified results and certifiers, never a
+  producer (Matthew, 2026-10-21; since v0.3.1 an `Engine`, `Prover` or
+  `Disprover` is pinned on its certifiers only); `sorryAx` fails everywhere,
+  producers included; named exceptions at `Classical.choice`; `native_decide` excluded
   under both axiom spellings (`Lean.ofReduceBool` and the per-proof
   `…native_decide.ax_…`; lax-logic `scripts/ledger.lean` checks both).
   Automated already. The core lemmas that leak `Classical.choice` (locus

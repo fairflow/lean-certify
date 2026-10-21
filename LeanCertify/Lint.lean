@@ -10,8 +10,13 @@ reports any constant on a rule's list, with the chain that reaches it.
   `Certifier` or `Engine`, that of its `check` functions only) must not
   reach `WellFounded.fix`, a `._unary`/`._binary` auxiliary of well-founded
   recursion, `WellFounded.Nat.fix` (which does reduce, but is not
-  structural; see `docs/v1-report.md`), or an opaque constant (which is
-  what `partial` produces). A declaration with `@[implemented_by]` is
+  structural; see `docs/v1-report.md`), `Lean.Order.fix` (what
+  `partial_fixpoint` produces: a least fixpoint, not kernel-reducible; such a
+  definition belongs in `produce`, or in `Holds` with a certificate checked
+  against it), an opaque constant (which is what `partial` produces), or an
+  axiom that is not a proposition (`Classical.choice`, `sorryAx`: no value to
+  reduce; v0.3.1). Propositional axioms (`propext`, `Quot.sound`) never block
+  the kernel and are not reported; proofs are not walked. A declaration with `@[implemented_by]` is
   information under `route := .kernel` (the kernel reduces its reference
   definition; v0.2) and an error under any other route. The walk enters every module,
   core included, since the kernel unfolds them all; under the kernel route it
@@ -51,6 +56,14 @@ reports any constant on a rule's list, with the chain that reaches it.
   in `Classical.choice` (by `tauto`, say) then fails at its declaration.
 * `#certify_axioms f` (R4, an error): the axioms of `f` lie within
   `Harness.config.axioms`, plus the exceptions it names for `f`.
+* **The pin does not see the producer** (Matthew, 2026-10-21: only certified
+  results need a pin). For an `Engine`, a `Prover` or a `Disprover`, R4
+  checks its type and its certifiers; `produce` is untrusted, never evaluated
+  by the kernel, and may reach `Classical.choice` (a `partial_fixpoint`
+  search does). A result stated with the named certifier (`K.verdict`, not
+  `E.yes.verdict`) does not mention the producer at all.
+  **`sorryAx` fails everywhere**, the producer included, whatever the
+  allow-list says.
 -/
 import LeanCertify.Certifier
 import LeanCertify.Config
@@ -141,6 +154,65 @@ def checkTerms (n : Name) : MetaM (Option (Array Name)) := do
                    (← proj (← mkAppM ``Certify.Engine.no #[k])))
     | _ => return none
 
+/-- The certifier fields of a bundle that carries an untrusted producer:
+an `Engine` (`yes`, `no`), a `Prover` or a `Disprover` (`certifier`;
+declared in `LeanCertify.Decider`, which imports this module's imports but
+not this module, hence the unchecked names). -/
+def bundleCertifiers : List (Name × List Name) :=
+  [(``Certify.Engine, [``Certify.Engine.yes, ``Certify.Engine.no]),
+   (`Certify.Prover, [`Certify.Prover.certifier]),
+   (`Certify.Disprover, [`Certify.Disprover.certifier])]
+
+/-- R4's two axiom sets for `n`: those the pin covers, and all of them. For a
+bundle with a producer (`bundleCertifiers`) the pin covers its type and its
+certifiers, not `produce` (Matthew, 2026-10-21: only certified results need a
+pin). For anything else both are `collectAxioms n`. -/
+def pinnedAxioms (n : Name) : MetaM (Array Name × Array Name) := do
+  let all ← collectAxioms n
+  let ci ← getConstInfo n
+  let parts? ← forallTelescopeReducing ci.type fun xs ty => do
+    let ty ← whnf ty
+    let some fields := ty.getAppFn.constName?.bind (List.lookup · bundleCertifiers)
+      | return none
+    let k := mkAppN (mkConst n (ci.levelParams.map mkLevelParam)) xs
+    let mut cs := ci.type.getUsedConstants
+    for f in fields do
+      cs := cs ++ (← whnf (← mkAppM f #[k])).getUsedConstants
+    return some cs
+  let some cs := parts? | return (all, all)
+  let mut pinned : Array Name := #[]
+  for c in cs do
+    for a in ← collectAxioms c do
+      unless pinned.contains a do pinned := pinned.push a
+  return (pinned, all)
+
+/-- R4's verdict on `n`, given the allow-list: `none` if it passes, else the
+error. `sorryAx` is never allowed, whatever the allow-list says, and fails
+even when only the producer reaches it. `what` names `n` in the message. -/
+def axiomFailure (n : Name) (what : MessageData) (pinned all : Array Name)
+    (allowed : List Name) (suffix : MessageData := m!"") : Option MessageData :=
+  let outside := pinned.filter fun a => a == ``sorryAx || !allowed.contains a
+  if !outside.isEmpty then
+    some m!"R4 fails: {what} depends on {outside.toList}, outside the allow-list {allowed}{suffix}"
+  else if all.contains ``sorryAx then
+    some m!"R4 fails: the producer of {.ofConstName n} depends on sorryAx: \
+      a `sorry` fails everywhere, the producer included"
+  else none
+
+/-- For a failed pin on `n`: each bundle named in `n`'s value whose producer,
+not its certifiers, brings in one of the axioms `excess`. A result stated as
+`E.yes.verdict s c` names the engine `E`, and with it the producer. -/
+def producerHint (n : Name) (excess : Array Name) : MetaM MessageData := do
+  let some v := (← getEnv).find? n |>.bind (·.value? (allowOpaque := true)) | return m!""
+  let mut out := m!""
+  for c in v.getUsedConstants do
+    let (pinned, all) ← pinnedAxioms c
+    if excess.any fun a => all.contains a && !pinned.contains a then
+      out := out ++ m!"\n  they enter through the producer of {.ofConstName c}: state the result \
+        with the named certifier (`K.verdict`, not `E.yes.verdict`), whose term does not \
+        mention the producer"
+  return out
+
 /-! ### R3: structural recursion -/
 
 /-- The `Nat` operations the Lean kernel itself evaluates on literals (GMP
@@ -161,6 +233,30 @@ def kernelNatOps : List Name :=
 def isImplementedBy (env : Environment) (n : Name) : Bool :=
   (Compiler.implementedByAttr.getParam? env n).isSome
 
+/-- Is `t`, the type of an axiom, a proposition? Read off syntactically: the
+body under the leading `∀`s is headed by a constant whose type ends in
+`Prop` (`Eq`, `True`, …), or by a bound variable whose binder type is `Prop`.
+Anything else counts as data, which is the cautious answer for R3. Covers
+`propext`, `Quot.sound`, `Lean.ofReduceBool` (propositions) and
+`Classical.choice`, `sorryAx` (data). -/
+def isPropType (env : Environment) (t : Expr) : Bool :=
+  go #[] t
+where
+  endsInProp : Expr → Bool
+    | .forallE _ _ b _ => endsInProp b
+    | .mdata _ e => endsInProp e
+    | e => e == .sort .zero
+  go (ctx : Array Expr) : Expr → Bool
+    | .forallE _ d b _ => go (ctx.push d) b
+    | .mdata _ e => go ctx e
+    | e => match e.getAppFn with
+      | .const c _ => match env.find? c with
+        | some ci => endsInProp ci.type
+        | none => false
+      | .bvar i =>
+        if i < ctx.size then ctx[ctx.size - 1 - i]!.consumeMData == .sort .zero else false
+      | _ => false
+
 /-- Why `n` blocks kernel reduction, if it does. -/
 def structuralOffence (env : Environment) (n : Name) : Option String :=
   if n == ``WellFounded.fix || n == ``WellFounded.fixF then
@@ -168,12 +264,20 @@ def structuralOffence (env : Environment) (n : Name) : Option String :=
   else if n == ``WellFounded.Nat.fix then
     some "well-founded recursion on a `Nat` measure: it reduces in the kernel \
       (fuel `measure + 1`), but it is not structural"
+  else if n == ``Lean.Order.fix then
+    some "partial_fixpoint (a least fixpoint): not kernel-reducible; use it in `produce`, \
+      or state facts about it in `Holds` and check them with a certificate"
   else if n.isStr && (n.getString! == "_unary" || n.getString! == "_binary") then
     some "auxiliary of a definition by well-founded recursion"
   else if isImplementedBy env n then
     some "@[implemented_by]: the compiled code is not the definition"
+  else if n == ``sorryAx then
+    some "a `sorry`: no value to reduce"
   else match env.find? n with
     | some (.opaqueInfo _) => some "opaque (a `partial def` or `opaque`): no value to reduce"
+    | some (.axiomInfo ai) =>
+      if isPropType env ai.type then none
+      else some "an axiom that is not a proposition: no value to reduce"
     | _ => none
 
 /-- The panic functions. `panicCore msg` is `default` (Init/Prelude.lean,
@@ -678,13 +782,12 @@ syntax (name := certifyAxioms) "#certify_axioms " ident : command
     let cfg ← liftTermElabM Harness.readConfig
     let extra := (cfg.axiomExceptions.find? (·.1 == n)).map (·.2) |>.getD []
     let allowed := cfg.axioms ++ extra
-    let axs ← collectAxioms n
-    let outside := axs.filter (!allowed.contains ·)
-    if outside.isEmpty then
-      logInfo m!"R4 passes: {.ofConstName n} depends on {axs.toList} ⊆ {allowed}"
-    else
-      logErrorAt id m!"R4 fails: {.ofConstName n} depends on {outside.toList}, \
-        outside the allow-list {allowed}"
+    let (axs, all) ← liftTermElabM <| pinnedAxioms n
+    match axiomFailure n m!"{.ofConstName n}" axs all allowed with
+    | none => logInfo m!"R4 passes: {.ofConstName n} depends on {axs.toList} ⊆ {allowed}"
+    | some msg =>
+      let excess := axs.filter fun a => a == ``sorryAx || !allowed.contains a
+      logErrorAt id (msg ++ (← liftTermElabM <| producerHint n excess))
   | _ => throwUnsupportedSyntax
 
 /-! ### R4, automatic: the certifier linter -/
@@ -714,10 +817,10 @@ def certifierAxiomLinter : Linter where
     for n in fresh do
       let extra := (cfg.axiomExceptions.find? (·.1 == n)).map (·.2) |>.getD []
       let allowed := cfg.axioms ++ extra
-      let outside := (← collectAxioms n).filter (!allowed.contains ·)
-      unless outside.isEmpty do
-        logError m!"R4 fails: the certifier {.ofConstName n} depends on {outside.toList}, \
-          outside the allow-list {allowed} (Harness.config)"
+      let (pinned, all) ← liftTermElabM <| pinnedAxioms n
+      if let some msg := axiomFailure n m!"the certifier {.ofConstName n}" pinned all allowed
+          m!" (Harness.config)" then
+        logError msg
 
 initialize addLinter certifierAxiomLinter
 
