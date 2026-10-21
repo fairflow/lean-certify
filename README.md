@@ -184,4 +184,22 @@ A `#guard_msgs` that pinned "R3 passes" on a checker reaching a
 non-propositional axiom, or R4's message for an engine whose producer uses
 `sorry`, must be re-pinned.
 
+5. **New: facts about `partial_fixpoint` functions, certified by a table**
+   (`LeanCertify/Fixpoint.lean`, `Certify.Fixpoint`). The kernel cannot
+   evaluate a `partial_fixpoint` function; it can evaluate its body `F` on
+   the entries of a table that the compiled function records in
+   post-order. `check_sound` (by induction along the table): each entry
+   `(a, b)` of a passing table holds of every fixed point of `F`
+   (`FixesAt F a b`, which `fixesAt_iff` shows is exactly the
+   `partial_fixpoint` value). `check_spec`: given the one-step lemma that
+   `partial_correctness` takes as premise, each entry satisfies the
+   invariant, which gives facts about the subject. Both are free of
+   `Classical.choice`; only a statement that names the `partial_fixpoint`
+   function itself depends on it. Certifiers: `certifier`,
+   `specCertifier`. Cost: one body evaluation per entry plus linear
+   lookups, a fraction of a second for a few hundred entries
+   (`LeanCertifyTest/FixpointScale.lean`). Examples and negative tests:
+   `LeanCertifyTest/Fixpoint.lean` (Collatz, Ackermann's function with a
+   nested call).
+
 Licence: Apache-2.0 (see `LICENSE`).
