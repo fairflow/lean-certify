@@ -36,8 +36,9 @@ Do them in order. Do not start a step before the previous one's output exists.
    (a proposition, or a type of derivations). State finiteness and
    termination facts as theorems. A measure (space bound, derivation
    height) is stated here and nowhere later. **No fuel or budget in `Holds`.**
-   Send `Holds`, `Spec`, `Cert` and the type of `sound` to Matthew before any
-   proof (R10). He is the gate and may supply an alternative.
+   Write `Holds`, `Spec`, `Cert` and the type of `sound` down where Matthew
+   can read them, and screen them, before any proof (R10). Do not wait for
+   an answer: he may supply an alternative at any time, and it then holds.
 2. **Certificate.** `Cert` is literal data (naturals, lists, a small
    inductive), with a prose description of its format. Every existential in
    `Holds` becomes a listed witness; every universal becomes a finite table
@@ -195,8 +196,10 @@ The executable is `def main := Certify.Cli.main Harness.tools parse Harness.deci
   is missing information: add a witness.
 - **R9. Negative test.** Corrupt one certificate per checker; watch the gate
   reject it.
-- **R10. Statements first.** `Holds`, `Cert` and the type of `sound` go to
-  Matthew before any proof.
+- **R10. Statements first.** `Holds`, `Cert` and the type of `sound` are
+  written down, displayed and screened before any proof, and shown to
+  Matthew in the next report. Nothing waits for his answer, unless he has
+  asked to be the gate for that piece of work (amended 2026-11-25).
 - **R11. External re-check.** `lean4checker` on certified modules is a test a
   project may run (`lean4checker := true`); not in the gate.
 

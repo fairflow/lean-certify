@@ -314,9 +314,12 @@ definition, the traversal `collectAxioms` performs.
 - **R9. Negative test.** Corrupt one certificate per checker and watch the
   gate reject it (locus did this for all five checkers). Automatable as a
   test that flips one index.
-- **R10. Statements first.** `Holds`, `Cert` and the type of `sound` are a
-  proposal that goes to Matthew before any proof; he is the gate and may
-  supply an alternative statement. Procedure, not lint.
+- **R10. Statements first.** `Holds`, `Cert` and the type of `sound` are
+  written down, displayed and screened before any proof, and shown to
+  Matthew in the next report; he may supply an alternative statement at
+  any time. Nothing waits for his answer, unless he has asked to be the
+  gate for that piece of work (amended 2026-11-25; before that, he was
+  the gate). Procedure, not lint.
 - **R11. External re-check.** `lean4checker` on certified modules
   (survey gap 1; [24], [35]). A test a project may run; not a rule and not
   in the gate (decision 4).
@@ -524,6 +527,8 @@ question 4); streaming beyond chunking if a certificate outgrows one file.
 9. Chunk size and kernel-time threshold are per project.
 10. Committed versus regenerated certificates is per project.
 11. R10 stands: the statements are a proposal and Matthew is the gate.
+    (Amended 2026-11-25: statements still come first, and nothing waits
+    for his answer unless he asks to be the gate; see R10.)
 12. Settings are supplied in a per-project Lean file (`Harness.Config`,
     section 8b); JSON only ever generated from it.
 
